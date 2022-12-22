@@ -9,6 +9,7 @@ import UIKit
 
 protocol CountriesViewControllerProtocol: AnyObject {
     func deleteRow(at index: Int)
+    func presentAlert(with message: String, and title: String)
 }
 
 class CountriesViewController: UIViewController {
@@ -39,6 +40,13 @@ extension CountriesViewController: CountriesViewControllerProtocol {
         tableView.performBatchUpdates {
             tableView.deleteRows(at: [indexPath], with: .automatic)
         }
+    }
+    
+    func presentAlert(with message: String, and title: String){
+        let alert  = UIAlertController(title: title, message: message, preferredStyle: .alert)
+        let okAction = UIAlertAction(title: "OK", style: .default)
+        alert.addAction(okAction)
+        present(alert, animated: true)
     }
 }
 
@@ -74,6 +82,11 @@ extension CountriesViewController: UITableViewDelegate, UITableViewDataSource {
             // Cerebro borre el país que se encuentra en el indexPath.row
             brain.deleteCountry(at: indexPath.row)
         }
+    }
+    
+    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        tableView.deselectRow(at: indexPath, animated: true)
+        brain.processCountrySelected(at: indexPath.row)
     }
     
 }
