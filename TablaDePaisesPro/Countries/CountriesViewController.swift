@@ -8,7 +8,7 @@
 import UIKit
 
 protocol CountriesViewControllerProtocol: AnyObject {
-    
+    func deleteRow(at index: Int)
 }
 
 class CountriesViewController: UIViewController {
@@ -31,23 +31,25 @@ class CountriesViewController: UIViewController {
 }
 
 extension CountriesViewController: CountriesViewControllerProtocol {
-    
+    func deleteRow(at index: Int) {
+        // tableView.reloadData() // En caso de que quisiera hacer una actualización forzada de toda la tabla
+        // Esto tiene como desventaja que vuelve a invocar el llamado de todos los métodos que son requeridos por la tabla (computacionalmente es muy costoso)
+        //MARK: - Aproximacion mas fina
+        let indexPath = IndexPath(row: index, section: 0) // 0 porque solo tenemos una seccion
+        tableView.performBatchUpdates {
+            tableView.deleteRows(at: [indexPath], with: .automatic)
+        }
+    }
 }
 
 extension CountriesViewController: UITableViewDelegate, UITableViewDataSource {
-    //MARK: - Notemos que solo me trae 2 de las 3 cosas que requiere una tabla, faltaría el numero de secciones (Recordemos que si solo necesitamos una sola seccion no hay necesidad de implementarlo)
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         return brain.getNumberOfCountries()
     }
     
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        // MARK: - Covertir la UITableViewCell a mi modelo
-        //let cell = tableView.dequeueReusableCell(withIdentifier: Const.cellIdentifier, for: indexPath) //Esto me retorna un UITableViewCell, pero mi celda está modelada en un clase llamada CountryCell, por lo tanto debería hacer una conversion a ese modelo (Pero ojo que este metodo retorna un UITableViewCell)
-        
-        let cell = tableView.dequeueReusableCell(withIdentifier: Const.cellIdentifier, for: indexPath) as! CountryCellProtocol // Aquí cell ya puede acceder a los atributos de la clase CountryCell
-        //Quién me provee los datos?, la vista solo sabe pintar, para esto se los solicito al cerebro
-        // cerebro.obtenerElPaisParaElIndex(indexPath.row)
-        let country = brain.getCountryForIndex(for: indexPath.row) // Se crea la constante country por mantenimiento
+        let cell = tableView.dequeueReusableCell(withIdentifier: Const.cellIdentifier, for: indexPath) as! CountryCellProtocol
+        let country = brain.getCountryForIndex(for: indexPath.row)
         cell.setCountryName(country.name)
         cell.setLanguage(country.lenguage)
         cell.setExample(country.example)
@@ -56,13 +58,22 @@ extension CountriesViewController: UITableViewDelegate, UITableViewDataSource {
         
         cell.setFlagImage(flagImage)
         
-        // MARK: - Aquí me pide retornar una celda de tipo UITableViewCell, pero yo había hecho la conversión de cell a CountryCellProtocol, sin embargo CountryCellProtocol es conformado por la clase CountryCell que hereda de la clase UITableViewCell, pero el compilador no sabe esto, como resolvemos este problema?
-        
-        // MARK: - Para resolver este problema yo le indico al CountryCellProtocol que este protocolo tiene que ser conformado por clases que hereden de la clase UITableVieCell, esto se hace así
-        
-        // MARK: - protocol CountryCellProtocol where Self: UITableViewCell
-        
-        // Una vez solucionado el problema ahí si puedo retornar la celda cell
         return cell
     }
+    
+    //MARK : - Generar edición en una celda de una tabla (canEditRowAt, commit)
+    // Este metodo me habilita la opción de editar las celdas
+    func tableView(_ tableView: UITableView, canEditRowAt indexPath: IndexPath) -> Bool {
+        // Cerebro digame si puedo eliminar el país para indice dado por indexPath.row
+        brain.canDeleteCountry(for: indexPath.row)
+    }
+    
+    // Este metodo se manejan los eventos respecto a alguna opción de edición
+    func tableView(_ tableView: UITableView, commit editingStyle: UITableViewCell.EditingStyle, forRowAt indexPath: IndexPath) {
+        if editingStyle == .delete {
+            // Cerebro borre el país que se encuentra en el indexPath.row
+            brain.deleteCountry(at: indexPath.row)
+        }
+    }
+    
 }
